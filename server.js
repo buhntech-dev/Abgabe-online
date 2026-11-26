@@ -168,5 +168,14 @@ io.on('connection',socket=>{
   for(const event of ['call:offer','call:answer','call:ice']) socket.on(event,payload=>{const c=state.classes.find(x=>x.id===payload.classId);if(classForUser(c,socket.user)&&payload.to) io.to(payload.to).emit(event,{...payload,from:socket.id,user:safeUser(socket.user)});});
   socket.on('disconnect',()=>{for(const room of socket.rooms) if(room.startsWith('call:')) socket.to(room).emit('call:peer-left',{peerId:socket.id});});
 });
+app.use((err,req,res,next)=>{
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({error:'Die Datei ist zu groß. Erlaubt sind maximal 25 MB pro Datei.'});
+  }
+  console.error('Request error:',err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({error:'Der Upload ist fehlgeschlagen. Bitte versuche es erneut.'});
+});
+
 app.get(/.*/,(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 loadState().then(()=>server.listen(PORT,'0.0.0.0',()=>console.log('Abgabe-online listening on '+PORT))).catch(e=>{console.error(e);process.exit(1);});
