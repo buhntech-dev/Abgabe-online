@@ -37,8 +37,14 @@ async function loadState() {
   } catch (e) { if (e.name !== 'NoSuchKey' && e.$metadata?.httpStatusCode !== 404) console.error('State load:', e.message); }
   const email = (process.env.OWNER_EMAIL || 'owner@abgabe-online.de').toLowerCase();
   const password = process.env.OWNER_PASSWORD || 'Change-this-owner-password-now!';
-  if (!state.users.some(u => u.email === email)) {
-    state.users.push({ id: crypto.randomUUID(), name: 'Plattform-Owner', email, password: await bcrypt.hash(password, 12), role: 'Owner', createdAt: new Date().toISOString() });
+  let owner = state.users.find(u => u.email === email);
+  if (!owner) {
+    owner = { id: crypto.randomUUID(), name: 'Plattform-Owner', email, password: await bcrypt.hash(password, 12), role: 'Owner', createdAt: new Date().toISOString() };
+    state.users.push(owner);
+    await persist();
+  } else if (process.env.OWNER_PASSWORD && !(await bcrypt.compare(password, owner.password))) {
+    // Keep the Owner login synchronized with the Railway secret so credentials can be reset safely.
+    owner.password = await bcrypt.hash(password, 12);
     await persist();
   }
 }
