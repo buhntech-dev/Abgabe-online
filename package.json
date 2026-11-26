@@ -1,0 +1,17 @@
+{
+  "name": "abgabe-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Digitale Lernplattform mit Klassen, Aufgaben, Chat und Live-Unterricht",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.850.0",
+    "bcryptjs": "^3.0.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1"
+  }
+}
