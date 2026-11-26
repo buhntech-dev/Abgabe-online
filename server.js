@@ -74,6 +74,20 @@ app.post('/api/login', async (req,res) => {
   if(!user || !await bcrypt.compare(password,user.password)) return res.status(401).json({error:'E-Mail oder Passwort ist falsch.'});
   const token=tokenFor(user); res.cookie('abgabe_token',token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:7*86400000}); res.json({token,user:safeUser(user)});
 });
+app.post('/api/register',async(req,res)=>{
+  const name=String(req.body.name||'').trim(), email=String(req.body.email||'').toLowerCase().trim(), password=String(req.body.password||''), code=String(req.body.code||'').trim().toUpperCase();
+  if(!name||!email||password.length<8||code.length!==6) return res.status(400).json({error:'Bitte fülle alle Felder aus. Das Passwort braucht mindestens 8 Zeichen und der Klassen-Code 6 Zeichen.'});
+  if(state.users.some(u=>u.email===email)) return res.status(409).json({error:'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.'});
+  const schoolClass=state.classes.find(c=>c.code===code);
+  if(!schoolClass) return res.status(404).json({error:'Der Klassen-Code ist ungültig. Bitte prüfe ihn bei deiner Lehrkraft.'});
+  const user={id:crypto.randomUUID(),name:name.slice(0,80),email,password:await bcrypt.hash(password,12),role:'Schüler',createdAt:new Date().toISOString()};
+  state.users.push(user);
+  schoolClass.members.push({userId:user.id,joinedAt:new Date().toISOString()});
+  await persist();
+  const token=tokenFor(user);
+  res.cookie('abgabe_token',token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:7*86400000});
+  res.status(201).json({token,user:safeUser(user),class:{id:schoolClass.id,name:schoolClass.name}});
+});
 app.get('/api/me',auth,(req,res)=>res.json({user:safeUser(req.user)}));
 app.post('/api/logout',(req,res)=>{res.clearCookie('abgabe_token');res.json({ok:true});});
 app.post('/api/owner/teachers',auth,allow('Owner','Admin'),async(req,res)=>{
